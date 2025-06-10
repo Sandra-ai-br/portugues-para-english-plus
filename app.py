@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from flask import Flask, request, jsonify, url_for, send_file
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from googletrans import Translator
 from gtts import gTTS
@@ -101,14 +101,14 @@ def translate_text():
 @app.route('/audio/<filename>')
 def serve_audio(filename):
     try:
-        return send_file(filename, mimetype="audio/mpeg")
+        return send_from_directory('.', filename, mimetype="audio/mpeg")
     except Exception as e:
         logging.error(f"Error serving audio {filename}: {e}")
         return jsonify({"error": "Audio not found"}), 404
 
 @app.route('/')
 def index():
-    return send_file('index.html')
+    return send_from_directory('.', 'index.html')
 
 if __name__ == '__main__':
     if translator is None or epitran_converter is None:
