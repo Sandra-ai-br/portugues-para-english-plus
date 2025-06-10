@@ -1,4 +1,8 @@
 Flask==2.3.3
-Flask-Cors==4.0.0 # Added for CORS support
+Flask-Cors==4.0.0
 googletrans==4.0.0rc1
 gTTS==2.5.1
+retrying==1.3.4
+gunicorn==20.1.0
+epitran==1.25
+panphon==0.21

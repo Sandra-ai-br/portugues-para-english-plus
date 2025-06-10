@@ -1,4 +1,43 @@
-<!DOCTYPE html>
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -16,7 +55,6 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
         }
-        
         .container {
             width: 90%;
             max-width: 600px;
@@ -27,7 +65,6 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             text-align: center;
         }
-        
         h1 {
             margin-top: 0;
             font-size: 28px;
@@ -35,7 +72,6 @@
             margin-bottom: 30px;
             color: white;
         }
-        
         .mic-button {
             width: 100px;
             height: 100px;
@@ -50,28 +86,23 @@
             transition: all 0.3s ease;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
-        
         .mic-button:hover {
             transform: scale(1.05);
             background-color: #ff3333;
         }
-        
         .mic-button:active {
             transform: scale(0.95);
         }
-        
         .mic-icon {
             width: 50px;
             height: 50px;
             fill: white;
         }
-        
         .status {
             margin: 20px 0;
             font-size: 18px;
             min-height: 27px;
         }
-        
         .result-container {
             background-color: rgba(255, 255, 255, 0.15);
             border-radius: 10px;
@@ -79,26 +110,24 @@
             margin-top: 20px;
             text-align: left;
         }
-        
         .result-label {
             font-weight: bold;
             margin-bottom: 5px;
             color: #f0f0f0;
         }
-        
         .result-text {
             margin-bottom: 15px;
             word-wrap: break-word;
         }
-        
         .portuguese {
             color: #a0e4ff;
         }
-        
         .english {
             color: #ffcc80;
         }
-        
+        .phonetic {
+            color: #b0ffb0;
+        }
         .audio-button {
             background-color: #4CAF50;
             border: none;
@@ -113,176 +142,176 @@
             border-radius: 5px;
             transition: background-color 0.3s;
         }
-        
         .audio-button:hover {
             background-color: #45a049;
         }
-        
         .audio-button:disabled {
             background-color: #cccccc;
             cursor: not-allowed;
         }
-        
         .footer {
             margin-top: 30px;
             font-size: 12px;
             color: rgba(255, 255, 255, 0.7);
         }
-        
         .pulse {
             animation: pulse 1.5s infinite;
         }
-        
         @keyframes pulse {
-            0% {
-                box-shadow: 0 0 0 0 rgba(255, 75, 75, 0.7);
-            }
-            70% {
-                box-shadow: 0 0 0 15px rgba(255, 75, 75, 0);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(255, 75, 75, 0);
-            }
+            0% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(255, 75, 75, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0); }
         }
-        
         @media (max-width: 600px) {
-            .container {
-                width: 95%;
-                padding: 20px;
-            }
-            
-            h1 {
-                font-size: 24px;
-            }
+            .container { width: 95%; padding: 20px; }
+            h1 { font-size: 24px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>PORTUGUÊS PARA ENGLISH</h1>
-        
-        <p>Clique no botão e fale em português para ouvir a tradução em inglês</p>
-        
+        <p>Fale em português e receba a tradução em inglês (texto, voz e fonética)</p>
         <button id="micButton" class="mic-button">
             <svg class="mic-icon" viewBox="0 0 24 24">
                 <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z" />
             </svg>
         </button>
-        
         <div id="status" class="status">Clique no botão para começar</div>
-        
         <div id="resultContainer" class="result-container" style="display: none;">
             <div class="result-label">Você falou (Português):</div>
             <div id="portugueseText" class="result-text portuguese"></div>
-            
             <div class="result-label">Tradução (English):</div>
             <div id="englishText" class="result-text english"></div>
-            
+            <div class="result-label">Fonética:</div>
+            <div id="phoneticText" class="result-text phonetic"></div>
             <button id="playButton" class="audio-button" disabled>
                 Ouvir pronúncia em inglês
             </button>
         </div>
-        
         <div class="footer">
             Desenvolvido com ❤️ para ajudar no aprendizado de inglês
         </div>
     </div>
-    
     <script>
         // Configuração da API
-        const API_URL = 'https://portugues-para-english-api.onrender.com';
-        
+        const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:8080' : '';
+
         // Elementos da página
         const micButton = document.getElementById('micButton');
         const statusElement = document.getElementById('status');
         const resultContainer = document.getElementById('resultContainer');
         const portugueseText = document.getElementById('portugueseText');
         const englishText = document.getElementById('englishText');
+        const phoneticText = document.getElementById('phoneticText');
         const playButton = document.getElementById('playButton');
-        
-        // Variáveis para armazenar os resultados
+
+        // Variáveis para resultados
         let currentPortugueseText = '';
         let currentEnglishText = '';
+        let currentPhoneticText = '';
         let currentAudioUrl = '';
-        
-        // Verificar se o navegador suporta reconhecimento de fala
+        let silenceTimeout = null;
+
+        // Verificar suporte ao reconhecimento de fala
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            statusElement.textContent = 'Seu navegador não suporta reconhecimento de fala. Tente usar Chrome ou Edge.';
+            statusElement.textContent = 'Seu navegador não suporta reconhecimento de fala. Use Chrome ou Edge.';
             micButton.disabled = true;
         }
-        
-        // Configurar o reconhecimento de fala
+
+        // Configurar reconhecimento de fala
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
         recognition.lang = 'pt-BR';
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
         // Evento de clique no botão do microfone
         micButton.addEventListener('click', () => {
             if (micButton.classList.contains('pulse')) {
-                // Parar a gravação
                 recognition.stop();
-                return;
-            }
-            
-            // Iniciar a gravação
-            try {
-                micButton.classList.add('pulse');
-                statusElement.textContent = 'Ouvindo... Fale em português';
-                recognition.start();
-                resultContainer.style.display = 'none';
-            } catch (error) {
-                console.error('Erro ao iniciar o reconhecimento:', error);
-                statusElement.textContent = 'Erro ao iniciar o microfone. Tente novamente.';
                 micButton.classList.remove('pulse');
+                statusElement.textContent = 'Reconhecimento pausado. Clique para continuar.';
+            } else {
+                try {
+                    micButton.classList.add('pulse');
+                    statusElement.textContent = 'Ouvindo... Fale em português';
+                    recognition.start();
+                } catch (error) {
+                    console.error('Erro ao iniciar reconhecimento:', error);
+                    statusElement.textContent = 'Erro ao iniciar o microfone. Tente novamente.';
+                    micButton.classList.remove('pulse');
+                }
             }
         });
-        
-        // Evento quando o reconhecimento de fala termina
-        recognition.onend = () => {
-            micButton.classList.remove('pulse');
-            statusElement.textContent = currentPortugueseText ? 'Traduzindo...' : 'Clique no botão para começar';
-        };
-        
-        // Evento quando ocorre um erro no reconhecimento de fala
+
+        // Evento quando ocorre um erro no reconhecimento
         recognition.onerror = (event) => {
             micButton.classList.remove('pulse');
             statusElement.textContent = `Erro: ${event.error === 'no-speech' ? 'Nenhuma fala detectada' : event.error}`;
+            recognition.stop();
+            recognition.start();
         };
-        
-        // Evento quando o reconhecimento de fala retorna resultados
+
+        // Evento de resultados do reconhecimento
         recognition.onresult = (event) => {
-            currentPortugueseText = event.results[0][0].transcript;
-            portugueseText.textContent = currentPortugueseText;
-            
-            // Traduzir o texto
-            translateText(currentPortugueseText);
+            let interimTranscript = '';
+            let finalTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    finalTranscript += transcript;
+                } else {
+                    interimTranscript += transcript;
+                }
+            }
+
+            if (finalTranscript) {
+                clearTimeout(silenceTimeout);
+                currentPortugueseText = finalTranscript;
+                portugueseText.textContent = currentPortugueseText;
+                resultContainer.style.display = 'block';
+                statusElement.textContent = 'Traduzindo...';
+                translateText(currentPortugueseText);
+            } else {
+                clearTimeout(silenceTimeout);
+                silenceTimeout = setTimeout(() => {
+                    if (interimTranscript) {
+                        currentPortugueseText = interimTranscript;
+                        portugueseText.textContent = currentPortugueseText;
+                        resultContainer.style.display = 'block';
+                        statusElement.textContent = 'Traduzindo...';
+                        translateText(currentPortugueseText);
+                    }
+                }, 1000);
+            }
         };
-        
+
         // Função para traduzir o texto
         async function translateText(text) {
             try {
-                statusElement.textContent = 'Traduzindo...';
-                
                 const response = await fetch(`${API_URL}/translate`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ text }),
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, src_lang: 'pt', dest_lang: 'en' }),
                 });
-                
+
                 if (!response.ok) {
-                    throw new Error('Erro na tradução');
+                    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
                 }
-                
+
                 const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
                 currentEnglishText = data.translation;
-                currentAudioUrl = `${API_URL}/speak?text=${encodeURIComponent(currentEnglishText)}`;
-                
-                // Exibir os resultados
+                currentPhoneticText = data.phonetic;
+                currentAudioUrl = data.audio_url;
+
                 englishText.textContent = currentEnglishText;
+                phoneticText.textContent = currentPhoneticText;
                 resultContainer.style.display = 'block';
                 playButton.disabled = false;
                 statusElement.textContent = 'Tradução concluída!';
@@ -291,18 +320,16 @@
                 statusElement.textContent = 'Erro ao traduzir. Tente novamente.';
             }
         }
-        
+
         // Evento de clique no botão de reprodução de áudio
         playButton.addEventListener('click', () => {
             if (currentAudioUrl) {
                 const audio = new Audio(currentAudioUrl);
                 audio.play();
                 statusElement.textContent = 'Reproduzindo áudio...';
-                
                 audio.onended = () => {
                     statusElement.textContent = 'Pronto para nova tradução';
                 };
-                
                 audio.onerror = () => {
                     statusElement.textContent = 'Erro ao reproduzir áudio. Tente novamente.';
                 };
